@@ -136,6 +136,10 @@ if __name__ == '__main__':
       
       # Check the produced homography matrix
       check_homography(np_image, H, nx, ny)
+
+
+
+
       points = []
       while len(points) < MEASURE_CLICKS:
         if rospy.is_shutdown():
