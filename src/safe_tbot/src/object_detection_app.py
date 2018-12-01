@@ -6,6 +6,7 @@ import argparse
 import multiprocessing
 import numpy as np
 import tensorflow as tf
+import imutils
 
 from utils.app_utils import FPS, WebcamVideoStream
 from multiprocessing import Queue, Pool
@@ -15,7 +16,7 @@ from object_detection.utils import visualization_utils as vis_util
 import rospy
 from safe_tbot.srv import ImageSrv, ImageSrvResponse
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge, CvBridgeError
 from constants import homography
 Q = np.linalg.inv(homography)
@@ -45,6 +46,13 @@ imwidth = 1920
 imheight = 1080
 
 pub = None
+
+# load the image image, convert it to grayscale, and detect edges
+template = '/home/cc/ee106a/fa18/class/ee106a-adn/safe_turtlebot/src/safe_tbot/src/patch.png'
+template = cv2.imread(template)
+template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+template = cv2.Canny(template, 50, 200)
+(tH, tW) = template.shape[:2]
 
 def apply_to_point(H, x, y):
     aug_pt = np.array([x, y, 1]).reshape((3,1))
@@ -121,14 +129,72 @@ def detect_objects(image_np, sess, detection_graph):
 
         floorx = (Q[0, 0] * pt[0] + Q[0, 1] * pt[1] + Q[0, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
         floory = (Q[1, 0] * pt[0] + Q[1, 1] * pt[1] + Q[1, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
-        published_point = Point(floorx, floory, 0)
+
+        
 
 
         print(floorx, floory)
         print('--')
     else:
         print('no humaz')
-    return image_np, published_point
+
+    ### turtlebot detection
+
+    # load the image, convert it to grayscale, and initialize the
+    # bookkeeping variable to keep track of the matched region
+    gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+    found = None
+
+    # loop over the scales of the image
+    for scale in np.linspace(0.2, 1.0, 20)[::-1]:
+        # resize the image according to the scale, and keep track
+        # of the ratio of the resizing
+        resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
+        r = gray.shape[1] / float(resized.shape[1])
+
+        # if the resized image is smaller than the template, then break
+        # from the loop
+        if resized.shape[0] < tH or resized.shape[1] < tW:
+            break
+
+        # detect edges in the resized, grayscale image and apply template
+        # matching to find the template in the image
+        edged = cv2.Canny(resized, 50, 200)
+        result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
+        (_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
+
+        # check to see if the iteration should be visualized
+        # if args.get("visualize", False):
+        #   # draw a bounding box around the detected region
+        #   clone = np.dstack([edged, edged, edged])
+        #   cv2.rectangle(clone, (maxLoc[0], maxLoc[1]),
+        #       (maxLoc[0] + tW, maxLoc[1] + tH), (0, 0, 255), 2)
+        #   cv2.imshow("Visualize", clone)
+        #   cv2.waitKey(0)
+
+        # if we have found a new maximum correlation value, then update
+        # the bookkeeping variable
+        if found is None or maxVal > found[0]:
+            found = (maxVal, maxLoc, r)
+
+    # unpack the bookkeeping variable and compute the (x, y) coordinates
+    # of the bounding box based on the resized ratio
+    (_, maxLoc, r) = found
+    (startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
+    (endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
+
+    pt = [(startX + endX) / 2.0, startY + 2./3. * (endY - startY)]
+
+    turtle_floorx = (Q[0, 0] * pt[0] + Q[0, 1] * pt[1] + Q[0, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
+    turtle_floory = (Q[1, 0] * pt[0] + Q[1, 1] * pt[1] + Q[1, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
+
+    print(turtle_floorx, turtle_floory)
+
+    # draw a bounding box around the detected result and display the image
+    cv2.rectangle(image_np, (startX, startY), (endX, endY), (0, 0, 255), 2)
+    cv2.circle(image_np, (int(pt[0]), int(pt[1])), 1, (0, 255, 0), 2)
+
+    return image_np, floorx, floory, turtle_floorx, turtle_floory
 
 
 def worker(input_q, output_q):
@@ -162,7 +228,7 @@ if __name__ == '__main__':
     video_source = 0
     width = 480
     height = 360 
-    num_workers = 4
+    num_workers = 3
     queue_size = 5
 
 
@@ -183,7 +249,7 @@ if __name__ == '__main__':
 
     # Initializes the image processing node
     rospy.init_node('object_detection_node')
-    pub = rospy.Publisher('human_pos', Point, queue_size=10)
+    pub = rospy.Publisher('/human_pose1', PoseStamped, queue_size=10)
   
     # Creates a function used to call the 
     # image capture service: ImageSrv is the service type
@@ -206,8 +272,31 @@ if __name__ == '__main__':
 
             t = time.time()
 
-            output_rgb, published_point = output_q.get()
-            pub.publish(published_point)
+            output_rgb, floorx, floory, turtle_floorx, turtle_floory = output_q.get()
+
+            human_pose = PoseStamped()
+            human_pose.header.frame_id="/world"
+            human_pose.header.stamp = rospy.Time.now()
+            
+            human_pose.pose.position.x = floorx
+            human_pose.pose.position.y = floory
+            human_pose.pose.position.z = 0
+
+            pub.publish(human_pose)
+
+
+            turtlebot_pose = PoseStamped()
+            turtlebot_pose.header.frame_id="/world"
+            turtlebot_pose.header.stamp = rospy.Time.now()
+            
+            turtlebot_pose.pose.position.x = floorx
+            turtlebot_pose.pose.position.y = floory
+            turtlebot_pose.pose.position.z = 0
+
+
+            pub.publish(turtlebot_pose)
+
+
             output_rgb = cv2.cvtColor(output_rgb, cv2.COLOR_RGB2BGR)
             cv2.imshow('Video', output_rgb)
             fps.update()
@@ -218,11 +307,13 @@ if __name__ == '__main__':
                 break
         except rospy.ServiceException, e:
             print "image_process: Service call failed: %s"%e
+        except KeyboardInterrupt as ke:
+            break
 
     fps.stop()
     print('[INFO] elapsed time (total): {:.2f}'.format(fps.elapsed()))
     print('[INFO] approx. FPS: {:.2f}'.format(fps.fps()))
 
     pool.terminate()
-    video_capture.stop()
+    # video_capture.stop()
     cv2.destroyAllWindows()

@@ -25,4 +25,6 @@
   <node name="camera_srv" pkg="safe_tbot" type="camera_srv.py"  respawn="false" output="screen" />
   <!-- <node name="image_process" pkg="safe_tbot" type="image_process.py"  respawn="false" output="screen" /> -->
   <node name="object_detection_app" pkg="safe_tbot" type="object_detection_app.py" respawn="false" output="screen" />
+  <!-- <node name="turtlebot_detection" pkg="safe_tbot" type="turtlebot_detection.py" respawn="false" output="screen" /> -->
+
 </launch>
