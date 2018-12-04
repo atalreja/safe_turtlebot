@@ -129,12 +129,12 @@ def detect_objects(image_np, sess, detection_graph):
 
         floorx = (Q[0, 0] * pt[0] + Q[0, 1] * pt[1] + Q[0, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
         floory = (Q[1, 0] * pt[0] + Q[1, 1] * pt[1] + Q[1, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
-
+        floorx /= 100.
+        floory /= 100.
         
 
 
-        print(floorx, floory)
-        print('--')
+        print('human x,y:', floorx, floory, '(object detection)')
     else:
         print('no humaz')
 
@@ -187,8 +187,10 @@ def detect_objects(image_np, sess, detection_graph):
 
     turtle_floorx = (Q[0, 0] * pt[0] + Q[0, 1] * pt[1] + Q[0, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
     turtle_floory = (Q[1, 0] * pt[0] + Q[1, 1] * pt[1] + Q[1, 2]) / (Q[2, 0] * pt[0] + Q[2, 1] * pt[1] + Q[2, 2]) 
+    turtle_floorx /= 100.
+    turtle_floory /= 100.
 
-    print(turtle_floorx, turtle_floory)
+    print('turtlebot x,y:', turtle_floorx, turtle_floory)
 
     # draw a bounding box around the detected result and display the image
     cv2.rectangle(image_np, (startX, startY), (endX, endY), (0, 0, 255), 2)
@@ -228,7 +230,7 @@ if __name__ == '__main__':
     video_source = 0
     width = 480
     height = 360 
-    num_workers = 3
+    num_workers = 4
     queue_size = 5
 
 
@@ -250,7 +252,7 @@ if __name__ == '__main__':
     # Initializes the image processing node
     rospy.init_node('object_detection_node')
     pub = rospy.Publisher('/human_pose1', PoseStamped, queue_size=10)
-  
+    turtlebot_pub = rospy.Publisher('/turtlebot_pose1', PoseStamped, queue_size=10)
     # Creates a function used to call the 
     # image capture service: ImageSrv is the service type
     last_image_service = rospy.ServiceProxy('last_image', ImageSrv)
@@ -258,6 +260,8 @@ if __name__ == '__main__':
 
 
     fps = FPS().start()
+
+    trans_broadcaster = tf.TransformBroadcaster()
 
     while not rospy.is_shutdown():  # fps._numFrames < 120
         try:
@@ -289,12 +293,18 @@ if __name__ == '__main__':
             turtlebot_pose.header.frame_id="/world"
             turtlebot_pose.header.stamp = rospy.Time.now()
             
-            turtlebot_pose.pose.position.x = floorx
-            turtlebot_pose.pose.position.y = floory
+            turtlebot_pose.pose.position.x = turtle_floorx
+            turtlebot_pose.pose.position.y = turtle_floory
             turtlebot_pose.pose.position.z = 0
 
 
-            pub.publish(turtlebot_pose)
+            turtlebot_pub.publish(turtlebot_pose)
+
+            trans_broadcaster.sendTransform((turtle_floorx, turtle_floory, 0),
+                             tf.transformations.quaternion_from_euler(0, 0, 0), # TODO: put in the correct value of theta
+                             rospy.Time.now(),
+                             'turtlebot_1',
+                             'map')
 
 
             output_rgb = cv2.cvtColor(output_rgb, cv2.COLOR_RGB2BGR)
