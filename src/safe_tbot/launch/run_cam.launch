@@ -1,4 +1,8 @@
 <launch>
+  
+  <!-- Load parameters -->
+  <rosparam command="load" file="$(find crazyflie_human)/config/pedestrian_pred.yaml" />
+
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node"  output="screen" >
     <param name="video_device" value="/dev/video0" />
 
@@ -26,6 +30,9 @@
   <!-- <node name="image_process" pkg="safe_tbot" type="image_process.py"  respawn="false" output="screen" /> -->
   <node name="object_detection_app" pkg="safe_tbot" type="object_detection_app.py" respawn="false" output="screen" />
   <!-- <node name="turtlebot_detection" pkg="safe_tbot" type="turtlebot_detection.py" respawn="false" output="screen" /> -->
+
+  <node name="turtlebot_planner" pkg="safe_tbot" type="turtlebot_planner.py" respawn="false" output="screen" />
+
   
 
 </launch>

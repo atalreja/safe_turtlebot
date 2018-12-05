@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
     fps = FPS().start()
 
-    trans_broadcaster = tf.TransformBroadcaster()
+    # trans_broadcaster = tf.TransformBroadcaster()
 
     while not rospy.is_shutdown():  # fps._numFrames < 120
         try:
@@ -300,11 +300,11 @@ if __name__ == '__main__':
 
             turtlebot_pub.publish(turtlebot_pose)
 
-            trans_broadcaster.sendTransform((turtle_floorx, turtle_floory, 0),
-                             tf.transformations.quaternion_from_euler(0, 0, 0), # TODO: put in the correct value of theta
-                             rospy.Time.now(),
-                             'turtlebot_1',
-                             'map')
+            # trans_broadcaster.sendTransform((turtle_floorx, turtle_floory, 0),
+            #                  tf.transformations.quaternion_from_euler(0, 0, 0), # TODO: put in the correct value of theta
+            #                  rospy.Time.now(),
+            #                  'turtlebot_1',
+            #                  'map')
 
 
             output_rgb = cv2.cvtColor(output_rgb, cv2.COLOR_RGB2BGR)
