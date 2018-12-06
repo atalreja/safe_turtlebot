@@ -4,6 +4,7 @@ import pdb
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+from collections import OrderedDict
 
 class OccupancyGridGraph(object):
     def __init__(self, occ_grids, resolution, robot_radius, num_collision_samples):
@@ -31,46 +32,45 @@ class OccupancyGridGraph(object):
                     self.robot_radius, 
                     self.num_collision_samples, future_occ_grid, 
                     threshold):
-            # if self.occ_grids[time + 1, row, col] < threshold:
-                node_neighbors.append((time + 1, row, col))
+                node_neighbors.append(((time + 1, row, col), 0)) # no cost
             if row != 0:
                 # up
                 if self.check_no_collision((time + 1, row - 1, col), self.robot_radius,
                         self.num_collision_samples, future_occ_grid, threshold):
-                    node_neighbors.append((time + 1, row - 1, col))
+                    node_neighbors.append(((time + 1, row - 1, col), 1)) # cost = 1
                 if col != 0:
                     # left
                     if self.check_no_collision((time + 1, row, col - 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row, col - 1))
+                        node_neighbors.append(((time + 1, row, col - 1), 1)) # cost = 1
                     # up left
                     if self.check_no_collision((time + 1, row - 1, col - 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row - 1, col - 1))
+                        node_neighbors.append(((time + 1, row - 1, col - 1), 1)) # cost = 1
                 if col != self.cols - 1:
                     # right
                     if self.check_no_collision((time + 1, row, col + 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row, col + 1))
+                        node_neighbors.append(((time + 1, row, col + 1), 1)) # cost = 1
                     # up right
                     if self.check_no_collision((time + 1, row - 1, col + 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row - 1, col + 1))
+                        node_neighbors.append(((time + 1, row - 1, col + 1), 1)) # cost = 1
             if row != self.rows - 1:
                 # down
                 if self.check_no_collision((time + 1, row + 1, col), self.robot_radius,
                         self.num_collision_samples, future_occ_grid, threshold):
-                    node_neighbors.append((time + 1, row + 1, col))
+                    node_neighbors.append(((time + 1, row + 1, col), 1)) # cost = 1
                 if col != 0:
                     # down left
                     if self.check_no_collision((time + 1, row + 1, col - 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row + 1, col - 1))
+                        node_neighbors.append(((time + 1, row + 1, col - 1), 1)) # cost = 1
                 if col != self.cols - 1:
                     # down right
                     if self.check_no_collision((time + 1, row + 1, col + 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append((time + 1, row + 1, col + 1))
+                        node_neighbors.append(((time + 1, row + 1, col + 1), 1)) # cost = 1
         return node_neighbors
 
     def check_no_collision(self, grid_cell, radius, num_samples, occ_grid, threshold):
@@ -103,8 +103,18 @@ class OccupancyGridGraph(object):
     
     def point_to_grid_cell(self, x, y):
         """Return which grid cell the given point is in."""
-        grid_x = np.maximum(np.minimum((x / self.resolution).astype(int), self.rows - 1), 0)
-        grid_y = np.maximum(np.minimum((y / self.resolution).astype(int), self.cols - 1), 0)
+        grid_x = x / self.resolution
+        grid_y = y / self.resolution
+        if type(grid_x) == np.ndarray:
+            grid_x = grid_x.astype(int)
+        else:
+            grid_x = int(grid_x)
+        if type(grid_y) == np.ndarray:
+            grid_y = grid_y.astype(int)
+        else:
+            grid_y = int(grid_y)
+        grid_x = np.maximum(np.minimum(grid_x, self.rows - 1), 0)
+        grid_y = np.maximum(np.minimum(grid_y, self.cols - 1), 0)
         return grid_x, grid_y
 
     def sample_from_circle(self, num_samples, center, radius):
@@ -124,7 +134,7 @@ def heuristic(a, b):
 def a_star_search(graph, start, goal, threshold):
     frontier = PriorityQueue()
     frontier.put(start, 0)
-    came_from = {}
+    came_from = OrderedDict()
     cost_so_far = {}
     came_from[start] = None
     cost_so_far[start] = 0
@@ -135,8 +145,8 @@ def a_star_search(graph, start, goal, threshold):
         if current == goal:
             break
         
-        for next in graph.neighbors(current, threshold):
-            new_cost = cost_so_far[current] + 1 #graph.cost(current, next)
+        for next, cost in graph.neighbors(current, threshold):
+            new_cost = cost_so_far[current] + cost #graph.cost(current, next)
             if next not in cost_so_far or new_cost < cost_so_far[next]:
                 cost_so_far[next] = new_cost
                 priority = new_cost + heuristic(goal, next)
@@ -148,6 +158,7 @@ def a_star_search(graph, start, goal, threshold):
 def came_from_to_path(came_from, goal):
     path = []
     curr = goal
+    print('goalll in came from to path', goal)
     while curr is not None:
         path.append(curr)
         curr = came_from[curr]
