@@ -5,6 +5,7 @@
 #this script executable.
 
 import time
+from std_msgs.msg import Empty
 
 #Import the rospy package. For an import to work, it must be specified
 #in both the package manifest AND the Python file in which it is used.
@@ -29,19 +30,21 @@ class Planner(object):
 
         self.load_parameters()
 
-        self.plan_pub = rospy.Publisher('/turtlebot_plan', Plan, queue_size=1)
+        self.plan_pub = rospy.Publisher('/turtlebot_plan', Plan, queue_size=10) # WAS 1
         self.plan_vis_pub = rospy.Publisher('/turtlebot_plan_vis', MarkerArray, queue_size=1)
         self.goal_pub = rospy.Publisher('/turtlebot_goal', MarkerArray, queue_size=10)
         self.turtlebot_position_pub = rospy.Publisher('/turtlebot_position', MarkerArray, queue_size=1)
 
         # Listening to /turtlebot_pose1 for pose
-        self.turtlebot_pose_sub = rospy.Subscriber('/turtlebot_pose1', Point, self.receive_turtlebot_point)
+        # self.turtlebot_pose_sub = rospy.Subscriber('/turtlebot_pose1', Point, self.receive_turtlebot_point)
         # Listening to /odom for pose
-        # self.turtlebot_pose_sub = rospy.Subscriber('/odom', Odometry, self.receive_turtlebot_odom)
+        self.turtlebot_pose_sub = rospy.Subscriber('/odom', Odometry, self.receive_turtlebot_odom)
+
         # self.turtlebot_pose_sub = rospy.Subscriber('/ar_pose_marker', AlvarMarkers, self.receive_ar_markers)
         
         self.occu_sub = rospy.Subscriber('/occupancy_grid_time1', OccupancyGridTime, self.plan)
 
+        
 
     def load_parameters(self):
         # resolution (m/cell)
@@ -78,12 +81,12 @@ class Planner(object):
     def receive_turtlebot_odom(self, odom_msg):
         position = odom_msg.pose.pose.position
         self.turtlebot_floor_x, self.turtlebot_floor_y = position.x, position.y
-        print('RECEIVED TURTLEBOT POSE:', self.turtlebot_floor_x, self.turtlebot_floor_y, '\n')
+        # print('RECEIVED TURTLEBOT POSE:', self.turtlebot_floor_x, self.turtlebot_floor_y, '\n')
 
     def receive_turtlebot_point(self, point_msg):
         # turtlebot position (m)
         self.turtlebot_floor_x, self.turtlebot_floor_y = point_msg.x, point_msg.y
-        print('RECEIVED TURTLEBOT POSE:', self.turtlebot_floor_x, self.turtlebot_floor_y, '\n')
+        # print('RECEIVED TURTLEBOT POSE:', self.turtlebot_floor_x, self.turtlebot_floor_y, '\n')
 
     def check_row_col(self, came_from, goal):
         for node in came_from:
@@ -168,7 +171,7 @@ class Planner(object):
         turtle_temp_x, turtle_temp_y = occ_graph.point_to_grid_cell(turtle_temp_x, turtle_temp_y)
         grid_cell_turtlebot_goal = tuple([int(turtle_temp_time), turtle_temp_x, turtle_temp_y])
 
-        print('turtlebot start:', self.turtlebot_floor_x, self.turtlebot_floor_y)
+        # print('turtlebot start:', self.turtlebot_floor_x, self.turtlebot_floor_y)
         start_grid_x, start_grid_y = occ_graph.point_to_grid_cell(self.turtlebot_floor_x, self.turtlebot_floor_y)
         start = tuple([0, start_grid_x, start_grid_y])
         came_from, cost_so_far = a_star_search(occ_graph, start, grid_cell_turtlebot_goal, self.collision_threshold)
@@ -178,14 +181,14 @@ class Planner(object):
         #     print('No path available.')
         # else:
         closest_to_goal = self.filter_close_to_goal(came_from, grid_cell_turtlebot_goal)
-        print('original goal', grid_cell_turtlebot_goal)
-        print('closest node to goal', closest_to_goal)
+        # print('original goal', grid_cell_turtlebot_goal)
+        # print('closest node to goal', closest_to_goal)
         path_grid = came_from_to_path(came_from, closest_to_goal)
         xy_real = [occ_graph.grid_cell_centroid(grid_x, grid_y) for (t, grid_x, grid_y) in path_grid]
         points_real = [Point(x, y, 0) for (x, y) in xy_real]
-        print('points_real:')
-        for pt in points_real:
-            print(pt)
+        # print('points_real:')
+        # for pt in points_real:
+        #     print(pt)
         timestamp = prob_grids[0].header.stamp
         plan = Plan(points_real, timestamp)
         print('FINISHED PLANNING\n')

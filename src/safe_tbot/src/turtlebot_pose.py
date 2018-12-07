@@ -25,7 +25,7 @@ class TurtlebotPose:
         trans = self.tfBuffer.lookup_transform(self.origin_frame, self.turtlebot_frame, rospy.Time())
         x, y = trans.transform.translation.x, trans.transform.translation.y
         point = Point(y, x, 0) # flip because the origin frame has inverted x and y
-        self.pose_pub.publish(point)
+        # self.pose_pub.publish(point)
       except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
           print('EXCEPTION:', e)
           pass

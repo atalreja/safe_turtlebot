@@ -161,7 +161,7 @@ def a_star_search(graph, start, goal, threshold):
 def came_from_to_path(came_from, goal):
     path = []
     curr = goal
-    print('goalll in came from to path', goal)
+    # print('goalll in came from to path', goal)
     while curr is not None:
         path.append(curr)
         curr = came_from[curr]
@@ -212,7 +212,7 @@ def test1():
             print('No path available.')
         else:
             path = came_from_to_path(came_from, goal)
-            print('path:', path)
+            # print('path:', path)
             plot_path(path, occ_grids)
             break
 
