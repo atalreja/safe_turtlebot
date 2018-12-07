@@ -289,16 +289,16 @@ if __name__ == '__main__':
             pub.publish(human_pose)
 
 
-            turtlebot_pose = PoseStamped()
-            turtlebot_pose.header.frame_id="/world"
-            turtlebot_pose.header.stamp = rospy.Time.now()
+            # turtlebot_pose = PoseStamped()
+            # turtlebot_pose.header.frame_id="/world"
+            # turtlebot_pose.header.stamp = rospy.Time.now()
             
-            turtlebot_pose.pose.position.x = turtle_floorx
-            turtlebot_pose.pose.position.y = turtle_floory
-            turtlebot_pose.pose.position.z = 0
+            # turtlebot_pose.pose.position.x = turtle_floorx
+            # turtlebot_pose.pose.position.y = turtle_floory
+            # turtlebot_pose.pose.position.z = 0
 
 
-            turtlebot_pub.publish(turtlebot_pose)
+            # turtlebot_pub.publish(turtlebot_pose)
 
             # trans_broadcaster.sendTransform((turtle_floorx, turtle_floory, 0),
             #                  tf.transformations.quaternion_from_euler(0, 0, 0), # TODO: put in the correct value of theta

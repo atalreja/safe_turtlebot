@@ -429,7 +429,7 @@ def visualize_boxes_and_labels_on_image_array(image,
       (xmin + xmax) / 2,
       color='Azure',
       thickness=4,
-      display_str_list='halp',
+      # display_str_list='halp',
       use_normalized_coordinates=use_normalized_coordinates
       )
 

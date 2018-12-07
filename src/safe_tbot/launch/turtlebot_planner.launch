@@ -1,0 +1,11 @@
+<launch>
+  
+  <!-- Load parameters -->
+  <rosparam command="load" file="$(find crazyflie_human)/config/pedestrian_pred.yaml" />
+
+  <node name="turtlebot_pose" pkg="safe_tbot" type="turtlebot_pose.py" respawn="false" output="screen" />
+
+  <node name="turtlebot_planner" pkg="safe_tbot" type="turtlebot_planner.py" respawn="false" output="screen" />
+  
+
+</launch>

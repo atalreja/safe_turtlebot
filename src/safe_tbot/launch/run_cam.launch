@@ -31,8 +31,8 @@
   <node name="object_detection_app" pkg="safe_tbot" type="object_detection_app.py" respawn="false" output="screen" />
   <!-- <node name="turtlebot_detection" pkg="safe_tbot" type="turtlebot_detection.py" respawn="false" output="screen" /> -->
 
-  <node name="turtlebot_planner" pkg="safe_tbot" type="turtlebot_planner.py" respawn="false" output="screen" />
-  <node name="turtlebot_control" pkg="safe_tbot" type="turtlebot_control.py" respawn="false" output="screen" />
+  <!-- <node name="turtlebot_planner" pkg="safe_tbot" type="turtlebot_planner.py" respawn="false" output="screen" /> -->
+  <!-- <node name="turtlebot_control" pkg="safe_tbot" type="turtlebot_control.py" respawn="false" output="screen" /> -->
   
 
 </launch>

@@ -27,50 +27,52 @@ class OccupancyGridGraph(object):
         if time < self.max_time - 1: # last timestamp doesn't have neighbors
             future_occ_grid = self.occ_grids[time + 1]
             # stay in place, go forward in time
-            if self.check_no_collision(
+            if self.simple_check_no_collision(
                     (time + 1, row, col), 
                     self.robot_radius, 
                     self.num_collision_samples, future_occ_grid, 
                     threshold):
                 node_neighbors.append(((time + 1, row, col), 0)) # no cost
+            if col != 0:
+                # left
+                if self.simple_check_no_collision((time + 1, row, col - 1), self.robot_radius,
+                        self.num_collision_samples, future_occ_grid, threshold):
+                    node_neighbors.append(((time + 1, row, col - 1), 1)) # cost = 1
+            if col != self.cols - 1:
+                # right
+                if self.simple_check_no_collision((time + 1, row, col + 1), self.robot_radius,
+                        self.num_collision_samples, future_occ_grid, threshold):
+                    node_neighbors.append(((time + 1, row, col + 1), 1)) # cost = 1
             if row != 0:
                 # up
-                if self.check_no_collision((time + 1, row - 1, col), self.robot_radius,
+                if self.simple_check_no_collision((time + 1, row - 1, col), self.robot_radius,
                         self.num_collision_samples, future_occ_grid, threshold):
                     node_neighbors.append(((time + 1, row - 1, col), 1)) # cost = 1
                 if col != 0:
-                    # left
-                    if self.check_no_collision((time + 1, row, col - 1), self.robot_radius,
-                            self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row, col - 1), 1)) # cost = 1
                     # up left
-                    if self.check_no_collision((time + 1, row - 1, col - 1), self.robot_radius,
+                    if self.simple_check_no_collision((time + 1, row - 1, col - 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row - 1, col - 1), 1)) # cost = 1
+                        node_neighbors.append(((time + 1, row - 1, col - 1), np.sqrt(2))) # cost = sqrt(2)
                 if col != self.cols - 1:
-                    # right
-                    if self.check_no_collision((time + 1, row, col + 1), self.robot_radius,
-                            self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row, col + 1), 1)) # cost = 1
                     # up right
-                    if self.check_no_collision((time + 1, row - 1, col + 1), self.robot_radius,
+                    if self.simple_check_no_collision((time + 1, row - 1, col + 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row - 1, col + 1), 1)) # cost = 1
+                        node_neighbors.append(((time + 1, row - 1, col + 1), np.sqrt(2))) # cost = sqrt(2)
             if row != self.rows - 1:
                 # down
-                if self.check_no_collision((time + 1, row + 1, col), self.robot_radius,
+                if self.simple_check_no_collision((time + 1, row + 1, col), self.robot_radius,
                         self.num_collision_samples, future_occ_grid, threshold):
                     node_neighbors.append(((time + 1, row + 1, col), 1)) # cost = 1
                 if col != 0:
                     # down left
-                    if self.check_no_collision((time + 1, row + 1, col - 1), self.robot_radius,
+                    if self.simple_check_no_collision((time + 1, row + 1, col - 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row + 1, col - 1), 1)) # cost = 1
+                        node_neighbors.append(((time + 1, row + 1, col - 1), np.sqrt(2))) # cost = sqrt(2)
                 if col != self.cols - 1:
                     # down right
-                    if self.check_no_collision((time + 1, row + 1, col + 1), self.robot_radius,
+                    if self.simple_check_no_collision((time + 1, row + 1, col + 1), self.robot_radius,
                             self.num_collision_samples, future_occ_grid, threshold):
-                        node_neighbors.append(((time + 1, row + 1, col + 1), 1)) # cost = 1
+                        node_neighbors.append(((time + 1, row + 1, col + 1), np.sqrt(2))) # cost = sqrt(2)
         return node_neighbors
 
     def check_no_collision(self, grid_cell, radius, num_samples, occ_grid, threshold):
@@ -90,8 +92,9 @@ class OccupancyGridGraph(object):
         integral = sum([occ_grid[x, y] for x, y in zip(grid_circle_x, grid_circle_y)]) / float(num_samples)
         return integral < threshold
 
-    def simple_check_no_collision(self, grid_cell, occ_grid, threshold):
-        return occ_grid[grid_cell] < threshold
+    def simple_check_no_collision(self, grid_cell, radius, num_samples, occ_grid, threshold):
+        t, row, col = grid_cell
+        return occ_grid[row, col] < threshold
 
     def grid_cell_centroid(self, grid_x, grid_y):
         """Return the centroid of the given grid cell.

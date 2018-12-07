@@ -1,6 +1,6 @@
 image_width: 1920
 image_height: 1080
-camera_name: head_camera
+camera_name: ar_track_alvar_head_camera
 camera_matrix:
   rows: 3
   cols: 3
